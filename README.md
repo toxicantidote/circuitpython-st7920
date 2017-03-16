@@ -43,6 +43,37 @@ screen.clear()
 screen.redraw()
 ```
 
+# Included Example
+
+Install ampy by running...
+
+```bash
+pip install adafruit-ampy
+```
+
+Then change to this directory and upload files...
+
+```bash
+ampy --port /dev/ttyUSB0 put st7920.py
+ampy --port /dev/ttyUSB0 put example.py
+```
+
+You should then be able to interactively run the following from the REPL...
+
+```python
+import example
+example.run
+```
+
+Alternatively upload the main.py file as well as follows...
+
+```bash
+ampy --port /dev/ttyUSB0 put main.py
+```
+
+...and the example will automatically run on boot
+
+
 # See also
 
 [ST7920 Datasheet](http://www.hpinfotech.ro/ST7920.pdf)
