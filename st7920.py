@@ -22,11 +22,17 @@ class Screen:
         if spi != None:
             self.spi = spi
         else:
+            baudrate=8000000
+            polarity=1
+            phase=0
             if sck or mosi or miso: # any pins are identified
                 assert sck and mosi and miso, "All SPI pins sck, mosi and miso need to be specified"
-                self.spi = SPI(-1, baudrate=1800000, polarity=1, phase=0, sck=sck, mosi=mosi, miso=miso)
             else:
-                self.spi = SPI(1, baudrate=1800000, polarity=1, phase=0)
+                # workaround for hardware SPI constructor apparently not working
+                sck =  Pin(14, mode=Pin.OUT) # labelled 5 on nodeMCU
+                mosi = Pin(13, mode=Pin.OUT) # labelled 7 on nodeMCU
+                miso = Pin(12, mode=Pin.IN) # labelled 6 on nodeMCU # not connected, screen has no MISO line
+            self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
  
         self.resetDisplayPin = resetDisplayPin
         if self.resetDisplayPin != None:
