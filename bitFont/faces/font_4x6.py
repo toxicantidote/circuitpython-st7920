@@ -1,6 +1,6 @@
 from bitFont import BitFont
 font = BitFont(
-	fontHeight = 6,
+	height = 6,
 	pixBytes = bytearray(b"\xd7\x00\x0c\x9f\xf2)\xd6\xad%\x84\xa4T\n4xa\xe8UNE|\x04\x08\x11\x04\x01a\xc4\xe0T\x8e\xf4ARfE\xd5r\x10\xdfU%N\x95d\xc5\xa0U\x8bT9\x12(\x11J\xa4(J\xa4\x10A%8\xd1\xe5\x15\xdeW)N\xa4|\x91\xf3U\xd1W\x04N\xd4}\xc4\x17}\x11\x02=\x1f\xb1}\x10\xf4\x19\x9fG<N\xe4|\x85\xe0D\xeeWhR\x95\x04_\xf0A\xdf\x83=\x1f\xf3m\xc46pCVM_4\x10X\xf4\t\x81\x00\x82` 0\x92\xf7I\x0c#I\x8c\xf41\x1aEx\x05\xa9z\x9f\xc0Q\x1d\x04\x82\xddGh\xd1\x07y\x84\xe7\t\x1c#1\xbeB0\x92\xef\x11\x02e)\xc2#9\x90\xe7@\x8e\x87x\x12#\x99\xa8\'i\x16\xe1\x85_\xe8\x11B \x04"),
 	endCols = [1, 4, 8, 11, 14, 18, 19, 21, 23, 26, 29, 31, 34, 35, 38, 41, 44, 47, 50, 53, 56, 59, 62, 65, 68, 69, 71, 74, 77, 80, 83, 86, 89, 92, 95, 98, 101, 104, 107, 110, 113, 116, 119, 122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158, 161, 164, 166, 169, 171, 174, 177, 179, 182, 185, 188, 191, 194, 197, 200, 203, 206, 209, 212, 215, 218, 221, 224, 227, 230, 233, 236, 239, 242, 245, 248, 251, 254, 257, 260, 261, 264, 268]
 )
