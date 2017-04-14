@@ -2,8 +2,6 @@
 
 Micropython library for simple graphic primitives on ST7920 128x64 monochrome LCD panel using ESP8266 and SPI
 
-Developed by @cefn of @ShrimpingIt from @JMW95's reference Raspberry Pi python SPI port at https://github.com/JMW95/pyST7920
-
 # Features
 
 Can initialise a screen and framebuffer with...
@@ -73,6 +71,16 @@ ampy --port /dev/ttyUSB0 put main.py
 
 ...and the example will automatically run on boot
 
+
+# Typography
+
+See also @ShrimpingIt's [bitfont project](https://github.com/ShrimpingIt/bitfont) 
+for pixel typography logic which can be used with micropython-st7920 and 
+other bit-rendering environments.
+
+# Credits
+
+Developed by @cefn of @ShrimpingIt based on @JMW95's incredibly useful reference Raspberry Pi python SPI port at https://github.com/JMW95/pyST7920, funded by the Milecastles project
 
 # See also
 
