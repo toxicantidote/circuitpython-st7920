@@ -1,6 +1,10 @@
 from machine import Pin, SPI
 from time import sleep
 
+# dimension framebuffer
+rowBound = 64       # bytearray 'rows' - 64 rows -> 64bits
+colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
+
 """ EXAMPLE WIRING (MCU runs at 3.3V, so use VIN to get 5V)
         * RW    - GPIO13 (Cockle pin7)  - SPI MOSI  
         * E     - GPIO14 (Cockle pin5)  - SPI Clock
@@ -33,15 +37,18 @@ class Screen:
                 mosi = Pin(13, mode=Pin.OUT) # labelled 7 on nodeMCU
                 miso = Pin(12, mode=Pin.IN) # labelled 6 on nodeMCU # not connected, screen has no MISO line
             self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
+
+        # allocate frame buffer just once, use bytearrays for rows
+        self.fbuff = [bytearray(colBound) for rowPos in range(rowBound)]
  
         self.resetDisplayPin = resetDisplayPin
-        if self.resetDisplayPin != None:
+        if self.resetDisplayPin is not None:
             self.resetDisplayPin.init(mode=Pin.OUT)
             # reset the display
             self.reset()
         
         self.slaveSelectPin = slaveSelectPin
-        if self.slaveSelectPin != None:
+        if self.slaveSelectPin is not None:
             self.slaveSelectPin.init(mode=Pin.OUT)
             # deselect slave
             self.select(False)
@@ -59,11 +66,11 @@ class Screen:
         self.clear()
         self.redraw()
 
-    # slave select logic - reference system uses fixed wiring scheme
+    # slave select is active low - 0V means active
     def select(self, selected):
-        self.slaveSelectPin.value( 1 if selected else 0)
+        self.slaveSelectPin.value( 0 if selected else 1)
     
-    # reset logic untested - reference system uses fixed wiring scheme
+    # reset logic untested
     def reset(self):
         # pulse active low to reset screen
         self.resetDisplayPin.value(0)
@@ -80,8 +87,9 @@ class Screen:
         self.rot = rot
 
     def send(self, rs, rw, cmds):
+        #TODO CH MEMORY - PRE-ALLOCATE COMMAND BUFFER BYTEARRAY, OVERWRITE EACH TIME? JUST WRITE BYTES DIRECTLY?
         if self.slaveSelectPin:
-            select(True)
+            self.select(True)
         if type(cmds) is int:  # if a single arg, convert to a list
             cmds = [cmds]
         b1 = 0b11111000 | ((rw & 0x01) << 2) | ((rs & 0x01) << 1)
@@ -95,7 +103,14 @@ class Screen:
             self.select(False)
 
     def clear(self):
-        self.fbuff = [[0] * (128 // 8) for i in range(64)]
+        rowPos = 0
+        while rowPos < rowBound:
+            row = self.fbuff[rowPos]
+            colPos = 0
+            while colPos < colBound:
+                row[colPos]=0
+                colPos += 1
+            rowPos += 1
 
     def line(self, x1, y1, x2, y2, set=True):
         diffX = abs(x2 - x1)
