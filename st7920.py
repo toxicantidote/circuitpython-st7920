@@ -1,5 +1,12 @@
 from machine import Pin, SPI
 from time import sleep
+import gc
+
+def report_collect(msg):
+    heap = gc.mem_free()
+    gc.collect()
+    print(msg.format(heap - gc.mem_free()))
+    gc.collect()
 
 # dimension framebuffer
 rowBound = 64       # bytearray 'rows' - 64 rows -> 64bits
@@ -21,7 +28,8 @@ colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
 class Screen:
     def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None):
         
-        self.cmdbuf = bytearray()
+        self.cmdbuf = bytearray(33) # enough for 1 header byte plus 16 graphic bytes encoded as two bytes each
+        self.cmdmv = memoryview(self.cmdbuf)
         
         if spi != None:
             self.spi = spi
@@ -38,8 +46,8 @@ class Screen:
                 miso = Pin(12, mode=Pin.IN) # labelled 6 on nodeMCU # not connected, screen has no MISO line
             self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
 
-        # allocate frame buffer just once, use bytearrays for rows
-        self.fbuff = [bytearray(colBound) for rowPos in range(rowBound)]
+        # allocate frame buffer just once, use memoryview-wrapped bytearrays for rows
+        self.fbuff = [memoryview(bytearray(colBound)) for rowPos in range(rowBound)]
  
         self.resetDisplayPin = resetDisplayPin
         if self.resetDisplayPin is not None:
@@ -50,25 +58,25 @@ class Screen:
         self.slaveSelectPin = slaveSelectPin
         if self.slaveSelectPin is not None:
             self.slaveSelectPin.init(mode=Pin.OUT)
-            # deselect slave
-            self.select(False)
 
-        self.send(0, 0, 0x30)  # basic instruction set
-        self.send(0, 0, 0x30)  # repeated
-        self.send(0, 0, 0x0C)  # display on
+        self.select(True)
 
-        self.send(0, 0, 0x34)  # enable RE mode
-        self.send(0, 0, 0x34)
-        self.send(0, 0, 0x36)  # enable graphics display
+        self.send_flag(0x30)  # basic instruction set
+        self.send_flag(0x30)  # repeated
+        self.send_flag(0x0C)  # display on
+
+        self.send_flag(0x34)  # enable RE mode
+        self.send_flag(0x34)
+        self.send_flag(0x36)  # enable graphics display
+
+        self.select(False)
 
         self.set_rotation(0)  # rotate to 0 degrees
 
-        self.clear()
-        self.redraw()
-
     # slave select is active low - 0V means active
     def select(self, selected):
-        self.slaveSelectPin.value( 0 if selected else 1)
+        if self.slaveSelectPin:
+            self.slaveSelectPin.value( 0 if selected else 1)
     
     # reset logic untested
     def reset(self):
@@ -86,21 +94,48 @@ class Screen:
             self.height = 128
         self.rot = rot
 
-    def send(self, rs, rw, cmds):
-        #TODO CH MEMORY - PRE-ALLOCATE COMMAND BUFFER BYTEARRAY, OVERWRITE EACH TIME? JUST WRITE BYTES DIRECTLY?
-        if self.slaveSelectPin:
-            self.select(True)
-        if type(cmds) is int:  # if a single arg, convert to a list
-            cmds = [cmds]
-        b1 = 0b11111000 | ((rw & 0x01) << 2) | ((rs & 0x01) << 1)
-        self.cmdbuf[:] = bytearray() # empty cmdbuf
-        self.cmdbuf.append(b1)
-        for cmd in cmds:
-            self.cmdbuf.append(cmd & 0xF0)
-            self.cmdbuf.append((cmd & 0x0F) << 4)
-        self.spi.write(self.cmdbuf)
-        if self.slaveSelectPin:
-            self.select(False)
+    def clear_bytes(self, count):
+        for pos in range(count):
+            self.cmdbuf[pos] = 0
+
+    def set_header_byte(self, rs):
+        self.cmdbuf[0] = 0b11111000 | ((rs & 0x01) << 1)
+
+    # allows one byte offset for the header byte, then marshals each byte into two bytes according to protocol
+    def marshal_byte(self, pos, val):
+        self.cmdbuf[1 + (pos << 1)] = val & 0xF0
+        self.cmdbuf[2 + (pos << 1)] = (val & 0x0F) << 4
+
+    def send_flag(self, b):
+        count = 3
+        for pos in range(count):
+            self.cmdbuf[pos] = 0
+        self.cmdbuf[0] = 0b11111000
+        self.set_header_byte(0)
+        self.marshal_byte(0,b)
+        self.spi.write(self.cmdmv[:count])
+
+    def send_address(self, b1, b2):
+        count = 1 + (2 << 1)
+        for pos in range(count):
+            self.cmdbuf[pos] = 0
+        self.cmdbuf[0] = 0b11111000
+        self.marshal_byte(0,b1)
+        self.marshal_byte(1,b2)
+        self.spi.write(self.cmdmv[:count])
+
+    def send_data(self, arr):
+        arrlen = len(arr)
+        count = 1 + (arrlen << 1)
+        for pos in range(count):
+            self.cmdbuf[pos] = 0
+        self.cmdbuf[0] = 0b11111000 | 0x02
+        pos = 0
+        while pos < arrlen: # inlined code from marshal_byte
+            self.cmdbuf[1 + (pos << 1)] = arr[pos] & 0xF0
+            self.cmdbuf[2 + (pos << 1)] = (arr[pos] & 0x0F) << 4
+            pos += 1
+        self.spi.write(self.cmdmv[:count])
 
     def clear(self):
         rowPos = 0
@@ -165,6 +200,15 @@ class Screen:
                 self.fbuff[63 - x][y // 8] &= ~(1 << (7 - (y % 8)))
 
     def redraw(self, dx1=0, dy1=0, dx2=127, dy2=63):
+        self.select(True)
+
         for i in range(dy1, dy2 + 1):
-            self.send(0, 0, [0x80 + i % 32, 0x80 + ((dx1 // 16) + (8 if i >= 32 else 0))])  # set address
-            self.send(1, 0, self.fbuff[i][dx1 // 16:(dx2 // 8) + 1])
+            gc.collect()
+
+            self.send_address(0x80 + i % 32, 0x80 + ((dx1 // 16) + (8 if i >= 32 else 0)))
+            report_collect("Address send allocated: {}")
+
+            self.send_data(self.fbuff[i][dx1 // 16:(dx2 // 8) + 1])
+            report_collect("Data send allocated: {}")
+
+        self.select(False)
