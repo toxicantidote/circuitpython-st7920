@@ -108,28 +108,36 @@ class Screen:
 
     def send_flag(self, b):
         count = 3
-        for pos in range(count):
+        pos = 0
+        while pos < count:
             self.cmdbuf[pos] = 0
-        self.cmdbuf[0] = 0b11111000
-        self.set_header_byte(0)
-        self.marshal_byte(0,b)
+            pos += 1
+        self.cmdbuf[0] = 0b11111000  # rs = 0
+        self.cmdbuf[1] = b & 0xF0
+        self.cmdbuf[2] = (b & 0x0F) << 4
         self.spi.write(self.cmdmv[:count])
 
     def send_address(self, b1, b2):
-        count = 1 + (2 << 1)
-        for pos in range(count):
+        count = 5
+        pos = 0
+        while pos < count:
             self.cmdbuf[pos] = 0
-        self.cmdbuf[0] = 0b11111000
-        self.marshal_byte(0,b1)
-        self.marshal_byte(1,b2)
+            pos += 1
+        self.cmdbuf[0] = 0b11111000  # rs = 0
+        self.cmdbuf[1] = b1 & 0xF0
+        self.cmdbuf[2] = (b1 & 0x0F) << 4
+        self.cmdbuf[3] = b2 & 0xF0
+        self.cmdbuf[4] = (b2 & 0x0F) << 4
         self.spi.write(self.cmdmv[:count])
 
     def send_data(self, arr):
         arrlen = len(arr)
         count = 1 + (arrlen << 1)
-        for pos in range(count):
+        pos = 0
+        while pos < count:
             self.cmdbuf[pos] = 0
-        self.cmdbuf[0] = 0b11111000 | 0x02
+            pos += 1
+        self.cmdbuf[0] = 0b11111000 | 0x02  # rs = 1
         pos = 0
         while pos < arrlen: # inlined code from marshal_byte
             self.cmdbuf[1 + (pos << 1)] = arr[pos] & 0xF0
