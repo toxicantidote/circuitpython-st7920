@@ -92,14 +92,6 @@ class Screen:
         for pos in range(count):
             self.cmdbuf[pos] = 0
 
-    def set_header_byte(self, rs):
-        self.cmdbuf[0] = 0b11111000 | ((rs & 0x01) << 1)
-
-    # allows one byte offset for the header byte, then marshals each byte into two bytes according to protocol
-    def marshal_byte(self, pos, val):
-        self.cmdbuf[1 + (pos << 1)] = val & 0xF0
-        self.cmdbuf[2 + (pos << 1)] = (val & 0x0F) << 4
-
     def send_flag(self, b):
         count = 3
         pos = 0
@@ -109,7 +101,9 @@ class Screen:
         self.cmdbuf[0] = 0b11111000  # rs = 0
         self.cmdbuf[1] = b & 0xF0
         self.cmdbuf[2] = (b & 0x0F) << 4
-        self.spi.write(self.cmdmv[:count])
+        submv = self.cmdmv[:count]
+        self.spi.write(submv)
+        del submv
 
     def send_address(self, b1, b2):
         count = 5
@@ -122,7 +116,9 @@ class Screen:
         self.cmdbuf[2] = (b1 & 0x0F) << 4
         self.cmdbuf[3] = b2 & 0xF0
         self.cmdbuf[4] = (b2 & 0x0F) << 4
-        self.spi.write(self.cmdmv[:count])
+        submv = self.cmdmv[:count]
+        self.spi.write(submv)
+        del submv
 
     def send_data(self, arr):
         arrlen = len(arr)
@@ -137,7 +133,9 @@ class Screen:
             self.cmdbuf[1 + (pos << 1)] = arr[pos] & 0xF0
             self.cmdbuf[2 + (pos << 1)] = (arr[pos] & 0x0F) << 4
             pos += 1
-        self.spi.write(self.cmdmv[:count])
+        submv = self.cmdmv[:count]
+        self.spi.write(submv)
+        del submv
 
     def clear(self):
         rowPos = 0
