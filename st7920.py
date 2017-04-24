@@ -67,13 +67,14 @@ class Screen:
 
         self.set_rotation(0)  # rotate to 0 degrees
 
-    # slave select is active low - 0V means active
+    # slave select surprisingly? is active high +V means active
     def select(self, selected):
         if self.slaveSelectPin:
-            self.slaveSelectPin.value( 0 if selected else 1)
+            self.slaveSelectPin.value( 1 if selected else 0)
     
     # reset logic untested
     def reset(self):
+        assert self.resetDisplayPin, "No reset pin"
         # pulse active low to reset screen
         self.resetDisplayPin.value(0)
         sleep(0.1)
