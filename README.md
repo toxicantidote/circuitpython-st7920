@@ -82,6 +82,12 @@ other bit-rendering environments.
 
 Developed by @cefn of @ShrimpingIt based on @JMW95's incredibly useful reference Raspberry Pi python SPI port at https://github.com/JMW95/pyST7920, funded by the Milecastles project
 
+# Todo
+
+Consider use of Micropython's [framebuf](https://docs.micropython.org/en/latest/esp8266/library/framebuf.html) Framebuffer library to see if it offers any acceleration, or just for conformance with other libraries - draw primitives look like they are the same.
+
+
+
 # See also
 
 [ST7920 Datasheet](http://www.hpinfotech.ro/ST7920.pdf)
