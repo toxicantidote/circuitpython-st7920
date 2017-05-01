@@ -6,6 +6,9 @@ import gc
 rowBound = 64       # bytearray 'rows' - 64 rows -> 64bits
 colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
 
+# flag to workaround (buggy?) Hardware SPI on ESP8266
+spiWorkaround = True
+
 """ EXAMPLE WIRING (MCU runs at 3.3V, so use VIN to get 5V)
         * RW    - GPIO13 (Cockle pin7)  - SPI MOSI  
         * E     - GPIO14 (Cockle pin5)  - SPI Clock
@@ -33,12 +36,16 @@ class Screen:
             phase=0
             if sck or mosi or miso: # any pins are identified
                 assert sck and mosi and miso, "All SPI pins sck, mosi and miso need to be specified"
+                self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
             else:
-                # workaround for hardware SPI constructor apparently not working
-                sck =  Pin(14, mode=Pin.OUT) # labelled 5 on nodeMCU
-                mosi = Pin(13, mode=Pin.OUT) # labelled 7 on nodeMCU
-                miso = Pin(12, mode=Pin.IN) # labelled 6 on nodeMCU # not connected, screen has no MISO line
-            self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
+                if not spiWorkaround:
+                    self.spi = SPI(1, baudrate=baudrate, polarity=polarity, phase=phase) # Hardware SPI sck, mosi, miso fixed
+                else:
+                    # workaround for hardware SPI constructor apparently not working
+                    sck =  Pin(14, mode=Pin.OUT) # labelled 5 on nodeMCU
+                    mosi = Pin(13, mode=Pin.OUT) # labelled 7 on nodeMCU
+                    miso = Pin(12, mode=Pin.IN) # labelled 6 on nodeMCU # not connected, screen has no MISO line
+                    self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
 
         # allocate frame buffer just once, use memoryview-wrapped bytearrays for rows
         self.fbuff = [memoryview(bytearray(colBound)) for rowPos in range(rowBound)]
@@ -203,8 +210,10 @@ class Screen:
     def redraw(self, dx1=0, dy1=0, dx2=127, dy2=63):
         self.select(True)
 
-        for i in range(dy1, dy2 + 1):
+        i = dy1
+        while i < dy2 + 1:
             self.send_address(0x80 + i % 32, 0x80 + ((dx1 // 16) + (8 if i >= 32 else 0)))
             self.send_data(self.fbuff[i][dx1 // 16:(dx2 // 8) + 1])
+            i+=1
 
         self.select(False)
