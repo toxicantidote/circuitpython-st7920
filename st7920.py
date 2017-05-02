@@ -6,9 +6,6 @@ import gc
 rowBound = 64       # bytearray 'rows' - 64 rows -> 64bits
 colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
 
-# flag to workaround (buggy?) Hardware SPI on ESP8266
-spiWorkaround = True
-
 """ EXAMPLE WIRING (MCU runs at 3.3V, so use VIN to get 5V)
         * RW    - GPIO13 (Cockle pin7)  - SPI MOSI  
         * E     - GPIO14 (Cockle pin5)  - SPI Clock
@@ -23,29 +20,21 @@ spiWorkaround = True
     By default, attempts to wire to Hardware SPI as described at https://docs.micropython.org/en/latest/esp8266/esp8266/quickref.html#hardware-spi-bus
 """
 class Screen:
-    def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None):
+    def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None, baudrate=2500000):
         
         self.cmdbuf = bytearray(33) # enough for 1 header byte plus 16 graphic bytes encoded as two bytes each
         self.cmdmv = memoryview(self.cmdbuf)
         
-        if spi != None:
+        if spi is not None:
             self.spi = spi
         else:
-            baudrate=8000000
-            polarity=1
+            polarity=0
             phase=0
-            if sck or mosi or miso: # any pins are identified
+            if sck or mosi or miso: # any pins are identified - wire up as software SPI
                 assert sck and mosi and miso, "All SPI pins sck, mosi and miso need to be specified"
                 self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
             else:
-                if not spiWorkaround:
-                    self.spi = SPI(1, baudrate=baudrate, polarity=polarity, phase=phase) # Hardware SPI sck, mosi, miso fixed
-                else:
-                    # workaround for hardware SPI constructor apparently not working
-                    sck =  Pin(14, mode=Pin.OUT) # labelled 5 on nodeMCU
-                    mosi = Pin(13, mode=Pin.OUT) # labelled 7 on nodeMCU
-                    miso = Pin(12, mode=Pin.IN) # labelled 6 on nodeMCU # not connected, screen has no MISO line
-                    self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
+                self.spi = SPI(1, baudrate=baudrate, polarity=polarity, phase=phase)
 
         # allocate frame buffer just once, use memoryview-wrapped bytearrays for rows
         self.fbuff = [memoryview(bytearray(colBound)) for rowPos in range(rowBound)]
