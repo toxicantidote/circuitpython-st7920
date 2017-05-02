@@ -1,21 +1,16 @@
-from machine import SPI, Pin
 import st7920
 
+# implicitly uses hardware spi; https://docs.micropython.org/en/latest/esp8266/esp8266/quickref.html#hardware-spi-bus
+screen = st7920.Screen()
 
-def hardware():
-    return SPI(1, baudrate=1800000, polarity=1, phase=0)
+def clear():
+    screen.clear()
+    screen.redraw()
 
-def software():
-    # create a software SPI using the same pins as hardware SPI
-    sck = Pin(14, mode=Pin.OUT)  # labelled 5 on nodeMCU
-    mosi = Pin(13, mode=Pin.OUT)  # labelled 7 on nodeMCU
-    miso = Pin(12, mode=Pin.IN)  # labelled 6 on nodeMCU # not connected, screen has no MISO line
-    return SPI(-1, baudrate=1800000, polarity=1, phase=0, sck=sck, mosi=mosi, miso=miso)
+def draw():
 
-def run():
-
-    # create a screen using the spi
-    screen = st7920.Screen(spi=hardware(), slaveSelectPin=Pin(15))
+    # write zeroes to the buffer
+    screen.clear()
 
     # draw some points, lines, rectangles, filled rectangles in the buffer
     screen.plot(5, 5)
@@ -26,3 +21,10 @@ def run():
 
     # send the buffer to the display
     screen.redraw()
+
+def run():
+    clear()
+    draw()
+
+if __name__ == "__main__":
+    run()
