@@ -20,7 +20,7 @@ colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
     By default, attempts to wire to Hardware SPI as described at https://docs.micropython.org/en/latest/esp8266/esp8266/quickref.html#hardware-spi-bus
 """
 class Screen:
-    def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None, baudrate=2500000):
+    def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None, baudrate=1800000):
         
         self.cmdbuf = bytearray(33) # enough for 1 header byte plus 16 graphic bytes encoded as two bytes each
         self.cmdmv = memoryview(self.cmdbuf)
