@@ -1,6 +1,7 @@
 from machine import Pin, SPI
 from time import sleep
-import gc
+
+import canvas
 
 # dimension framebuffer
 rowBound = 64       # bytearray 'rows' - 64 rows -> 64bits
@@ -19,7 +20,7 @@ colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
         
     By default, attempts to wire to Hardware SPI as described at https://docs.micropython.org/en/latest/esp8266/esp8266/quickref.html#hardware-spi-bus
 """
-class Screen:
+class Screen(canvas.Canvas):
     def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None, baudrate=1800000):
         
         self.cmdbuf = bytearray(33) # enough for 1 header byte plus 16 graphic bytes encoded as two bytes each
@@ -42,12 +43,18 @@ class Screen:
         self.resetDisplayPin = resetDisplayPin
         if self.resetDisplayPin is not None:
             self.resetDisplayPin.init(mode=Pin.OUT)
-            # reset the display
-            self.reset()
-        
+
         self.slaveSelectPin = slaveSelectPin
         if self.slaveSelectPin is not None:
             self.slaveSelectPin.init(mode=Pin.OUT)
+
+        self.set_rotation(0)  # rotate to 0 degrees
+
+        self.config()
+
+
+    def config(self):
+        self.reset()
 
         self.select(True)
 
@@ -61,20 +68,18 @@ class Screen:
 
         self.select(False)
 
-        self.set_rotation(0)  # rotate to 0 degrees
-
     # slave select surprisingly? is active high +V means active
     def select(self, selected):
         if self.slaveSelectPin:
             self.slaveSelectPin.value( 1 if selected else 0)
-    
+
     # reset logic untested
     def reset(self):
-        assert self.resetDisplayPin, "No reset pin"
-        # pulse active low to reset screen
-        self.resetDisplayPin.value(0)
-        sleep(0.1)
-        self.resetDisplayPin.value(1)
+        if self.resetDisplayPin is not None:
+            # pulse active low to reset screen
+            self.resetDisplayPin.value(0)
+            sleep(0.1)
+            self.resetDisplayPin.value(1)
 
     def set_rotation(self, rot):
         if rot == 0 or rot == 2:
@@ -143,36 +148,6 @@ class Screen:
                 row[colPos]=0
                 colPos += 1
             rowPos += 1
-
-    def line(self, x1, y1, x2, y2, set=True):
-        diffX = abs(x2 - x1)
-        diffY = abs(y2 - y1)
-        shiftX = 1 if (x1 < x2) else -1
-        shiftY = 1 if (y1 < y2) else -1
-        err = diffX - diffY
-        drawn = False
-        while not drawn:
-            self.plot(x1, y1, set)
-            if x1 == x2 and y1 == y2:
-                drawn = True
-                continue
-            err2 = 2 * err
-            if err2 > -diffY:
-                err -= diffY
-                x1 += shiftX
-            if err2 < diffX:
-                err += diffX
-                y1 += shiftY
-
-    def fill_rect(self, x1, y1, x2, y2, set=True):
-        for y in range(y1, y2 + 1):
-            self.line(x1, y, x2, y, set)
-
-    def rect(self, x1, y1, x2, y2, set=True):
-        self.line(x1, y1, x2, y1, set)
-        self.line(x2, y1, x2, y2, set)
-        self.line(x2, y2, x1, y2, set)
-        self.line(x1, y2, x1, y1, set)
 
     def plot(self, x, y, set=True):
         if x < 0 or x >= self.width or y < 0 or y >= self.height:
