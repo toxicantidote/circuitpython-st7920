@@ -22,7 +22,7 @@ colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
 """
 class Screen(canvas.Canvas):
     def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None, baudrate=1800000):
-        
+
         self.cmdbuf = bytearray(33) # enough for 1 header byte plus 16 graphic bytes encoded as two bytes each
         self.cmdmv = memoryview(self.cmdbuf)
         
@@ -149,7 +149,7 @@ class Screen(canvas.Canvas):
                 colPos += 1
             rowPos += 1
 
-    def plot(self, x, y, set=True):
+    def plot(self, x, y, set=False):
         if x < 0 or x >= self.width or y < 0 or y >= self.height:
             return
         if set:
