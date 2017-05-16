@@ -1,6 +1,7 @@
 """Implementation of screen.Screen which writes the information to a Pillow Image"""
 
 import sys
+from math import ceil
 from threading import Thread
 import canvas
 from time import sleep
@@ -18,23 +19,34 @@ pilImageType = "RGB"
 pilImagePitch = canvas.Canvas.width * -3
 
 pygletImageFormat = "RGB"
-pygletScale = 8
 
+# empty function - scheduling this triggers redraw
 def noop(*a):
     pass
 
-def createPygletWindow(pillowScreen):
-    window = pyglet.window.Window(width=pillowScreen.width * pygletScale, height=pillowScreen.height * pygletScale)
+def createPygletWindow(screenList, scale=4):
+    numScreens = len(screenList)
+    screenCols= 2
+    screenRows = ceil(numScreens / screenCols)
+
+    screenWidth = screenList[0].width
+    screenHeight = screenList[0].height
+
+    windowWidth = screenCols * screenWidth * scale
+    windowHeight = screenRows * screenHeight * scale
+
+    for screenIndex, screen in enumerate(screenList):
+        assert screen.width == screenWidth
+        assert screen.height == screenHeight
+        screen.pygletSprite.x = (screenIndex % screenCols) * screenWidth * scale # horizontal placement
+        screen.pygletSprite.y = windowHeight - ( (1 + (screenIndex // screenCols)) * screenHeight  * scale) # vertical placement (top to bottom)
+        screen.pygletSprite.scale = scale
+
+    window = pyglet.window.Window(width=windowWidth, height=windowHeight)
 
     def refresh_window():
-        pillowScreen.pygletImage.set_data(pygletImageFormat, pilImagePitch, pillowScreen.pilScreenImage.tobytes())
-        pillowScreen.pygletSprite.image = pillowScreen.pygletImage
-        # assists with scaling textures in expected (blocky) way,
-        # following https://gamedev.stackexchange.com/questions/20297/how-can-i-resize-pixel-art-in-pyglet-without-making-it-blurry
-        glEnable(GL_TEXTURE_2D)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        pillowScreen.pygletSprite.draw()
+        for screenIndex, screen in enumerate(screenList):
+            screen.draw_sprite()
 
     #window.push_handlers(pyglet.window.event.WindowEventLogger())
 
@@ -46,13 +58,14 @@ def createPygletWindow(pillowScreen):
     def on_draw():
         refresh_window()
 
+    # causes redraw at 10 fps
     pyglet.clock.schedule_interval(noop, 0.1)
 
     return window
 
 class PillowScreen(canvas.Canvas):
 
-    def __init__(self, x=0, y=0, scale=pygletScale):
+    def __init__(self, x=0, y=0):
         # construct the buffer (equivalent to micropython in-memory buffer
         self.pilBufferImage = Image.new(pilImageType, (canvas.Canvas.width, canvas.Canvas.height), color=pilWhite)
         self.pilBufferDraw = ImageDraw.Draw(self.pilBufferImage) # exposes draw operations on buffer
@@ -70,7 +83,6 @@ class PillowScreen(canvas.Canvas):
             pitch=pilImagePitch
         )
         self.pygletSprite = pyglet.sprite.Sprite(self.pygletImage, 0, 0)
-        self.pygletSprite.scale = pygletScale
 
     def plot(self, x, y, set=False):
         if x >=0 and x < canvas.Canvas.width and y >= 0 and y < canvas.Canvas.height:
@@ -109,15 +121,25 @@ class PillowScreen(canvas.Canvas):
         color = super().normalise_color(color)
         return pilWhite if color is 1 else pilBlack
 
+    def draw_sprite(self):
+        self.pygletImage.set_data(pygletImageFormat, pilImagePitch, self.pilScreenImage.tobytes())
+        self.pygletSprite.image = self.pygletImage
+
+        # assists with scaling textures in expected (blocky) way,
+        # following https://gamedev.stackexchange.com/questions/20297/how-can-i-resize-pixel-art-in-pyglet-without-making-it-blurry
+        glEnable(GL_TEXTURE_2D)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        self.pygletSprite.draw()
+
 if __name__ == "__main__":
 
     smallFont = font
     bigFont = font
     screen = PillowScreen()
-    blackPlotter = screen.create_plotter(canvas.black)
-    whitePlotter = screen.create_plotter(canvas.white)
+    window = createPygletWindow([screen])
 
-    createPygletWindow(screen)
+    blackPlotter = screen.create_plotter(False)
 
     def draw_once(*a):
         print("Once")
@@ -131,11 +153,21 @@ if __name__ == "__main__":
         lineWidth = font.draw_line(b"Hello Mars", blackPlotter)
         screen.redraw(0,0, lineWidth, font.height)
 
-    def loop():
-        draw_once()
-        draw_twice()
+    global running
+    running = True
 
-    thread = Thread(target=loop)
-    thread.start()
+    def loop(*a):
+        while running:
+            draw_once()
+            draw_twice()
+
+    loopThread = Thread(target=loop)
+
+    @window.event
+    def on_close(*a, **k):
+        global running
+        running = False
+
+    loopThread.start()
 
     pyglet.app.run()
