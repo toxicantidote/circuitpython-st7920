@@ -1,7 +1,8 @@
 import st7920
+from machine import SPI, Pin
 
 # implicitly uses hardware spi; https://docs.micropython.org/en/latest/esp8266/esp8266/quickref.html#hardware-spi-bus
-screen = st7920.Screen()
+screen = st7920.Screen(slaveSelectPin=Pin(15), resetDisplayPin=Pin(5))
 
 def clear():
     screen.clear()
