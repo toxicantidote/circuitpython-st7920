@@ -1,7 +1,7 @@
 from machine import Pin, SPI
 from time import sleep
 
-import canvas
+from canvas import Canvas
 
 # dimension framebuffer
 rowBound = 64       # bytearray 'rows' - 64 rows -> 64bits
@@ -20,7 +20,7 @@ colBound = 128//8   # 'cols' in each bytearray - 16 bytes -> 128bits
         
     By default, attempts to wire to Hardware SPI as described at https://docs.micropython.org/en/latest/esp8266/esp8266/quickref.html#hardware-spi-bus
 """
-class Screen(canvas.Canvas):
+class Screen(Canvas):
     def __init__(self, sck=None, mosi=None, miso=None, spi=None, resetDisplayPin=None, slaveSelectPin=None, baudrate=1800000):
 
         self.cmdbuf = bytearray(33) # enough for 1 header byte plus 16 graphic bytes encoded as two bytes each
@@ -32,7 +32,8 @@ class Screen(canvas.Canvas):
             polarity=0
             phase=0
             if sck or mosi or miso: # any pins are identified - wire up as software SPI
-                assert sck and mosi and miso, "All SPI pins sck, mosi and miso need to be specified"
+                if not(sck and mosi and miso):
+                    raise AssertionError("All SPI pins sck, mosi and miso need to be specified")
                 self.spi = SPI(-1, baudrate=baudrate, polarity=polarity, phase=phase, sck=sck, mosi=mosi, miso=miso)
             else:
                 self.spi = SPI(1, baudrate=baudrate, polarity=polarity, phase=phase)
@@ -149,7 +150,7 @@ class Screen(canvas.Canvas):
                 colPos += 1
             rowPos += 1
 
-    def plot(self, x, y, set=False):
+    def plot(self, x, y, set=True): # TODO CH Optimise, avoid set checks rotation checks and self lookups with plotter factory?
         if x < 0 or x >= self.width or y < 0 or y >= self.height:
             return
         if set:
@@ -171,13 +172,43 @@ class Screen(canvas.Canvas):
             elif self.rot == 3:
                 self.fbuff[63 - x][y // 8] &= ~(1 << (7 - (y % 8)))
 
-    def redraw(self, dx1=0, dy1=0, dx2=127, dy2=63):
-        self.select(True)
-
-        i = dy1
-        while i < dy2 + 1:
-            self.send_address(0x80 + i % 32, 0x80 + ((dx1 // 16) + (8 if i >= 32 else 0)))
-            self.send_data(self.fbuff[i][dx1 // 16:(dx2 // 8) + 1])
-            i+=1
-
-        self.select(False)
+    def redraw(self, dx1=None, dy1=None, dx2=None, dy2=None):
+        """
+        # TODO CH bug here? (inherited from https://github.com/JMW95/pyST7920 ) buffer address ranges incorrect for some rectangles
+        # TODO CH HACK REMOVE causes rectangle to be ignored
+        dx1 = 0
+        dy1 = 0
+        dx2 = 127
+        dy2 = 63
+        # TODO CH HACK END
+        """
+        # TODO CH consider more efficient bounds checking
+        if dx1 is None:
+            dx1 = 0
+        else:
+            dx1 = max(0, dx1)
+            dx1 = min(127, dx1)
+        if dx2 is None:
+            dx2 = 127
+        else:
+            dx2 = max(0, dx2)
+            dx2 = min(127, dx2)
+        if dy1 is None:
+            dy1 = 0
+        else:
+            dy1 = max(0, dy1)
+            dy1 = min(63, dy1)
+        if dy2 is None:
+            dy2 = 63
+        else:
+            dy2 = max(0, dy2)
+            dy2 = min(63, dy2)
+        try:
+            self.select(True)
+            i = dy1
+            while i < dy2 + 1:
+                self.send_address(0x80 + i % 32, 0x80 + ((dx1 // 16) + (8 if i >= 32 else 0)))
+                self.send_data(self.fbuff[i][dx1 // 16:(dx2 // 8) + 1])
+                i+=1
+        finally:
+            self.select(False)
