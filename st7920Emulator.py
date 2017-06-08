@@ -84,9 +84,9 @@ class PillowScreen(canvas.Canvas):
         )
         self.pygletSprite = pyglet.sprite.Sprite(self.pygletImage, 0, 0)
 
-    def plot(self, x, y, set=False):
+    def plot(self, x, y, set=True):
         if x >=0 and x < canvas.Canvas.width and y >= 0 and y < canvas.Canvas.height:
-            self.pixelMap[x,y] = pilWhite if set else pilBlack
+            self.pixelMap[x,y] = pilBlack if set else pilWhite
         else:
             pass
 
@@ -94,12 +94,13 @@ class PillowScreen(canvas.Canvas):
         self.pilBufferDraw.rectangle((0, 0, self.pilBufferImage.width, self.pilBufferImage.height), fill=pilWhite)
 
     def redraw(self, dx1=0, dy1=0, dx2=127, dy2=63):
-        """
-        assert 0 <= dx1 and dx1 < canvas.Canvas.width, "Bad coord"
-        assert 0 <= dx2 and dx2 < canvas.Canvas.width, "Bad coord"
-        assert 0 <= dy1 and dy1 < canvas.Canvas.height, "Bad coord"
-        assert 0 <= dy2 and dy2 < canvas.Canvas.height, "Bad coord"
-        """
+        try:
+            assert 0 <= dx1 and dx1 < canvas.Canvas.width, "Bad coord"
+            assert 0 <= dx2 and dx2 < canvas.Canvas.width, "Bad coord"
+            assert 0 <= dy1 and dy1 < canvas.Canvas.height, "Bad coord"
+            assert 0 <= dy2 and dy2 < canvas.Canvas.height, "Bad coord"
+        except AssertionError as e:
+            pass
         dx1 = max(0, dx1)
         dx2 = max(0, dx2)
         dy1 = max(0, dy1)
