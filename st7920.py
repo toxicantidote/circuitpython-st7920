@@ -174,13 +174,12 @@ class Screen(Canvas):
 
     def redraw(self, dx1=None, dy1=None, dx2=None, dy2=None):
         """
-        # TODO CH bug here? (inherited from https://github.com/JMW95/pyST7920 ) buffer address ranges incorrect for some rectangles
-        # TODO CH HACK REMOVE causes rectangle to be ignored
+        # TODO CH bug here? (inherited from https://github.com/JMW95/pyST7920 ) buffer address ranges calculated incorrect for (bottom-right?) rectangles
+        # TODO CH HACK uncomment 4 lines below for redraw rectangle to be ignored
         dx1 = 0
         dy1 = 0
         dx2 = 127
         dy2 = 63
-        # TODO CH HACK END
         """
         # TODO CH consider more efficient bounds checking
         if dx1 is None:
