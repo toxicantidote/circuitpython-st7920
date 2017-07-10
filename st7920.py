@@ -150,27 +150,34 @@ class Screen(Canvas):
                 colPos += 1
             rowPos += 1
 
-    def plot(self, x, y, set=True): # TODO CH Optimise, avoid set checks rotation checks and self lookups with plotter factory?
-        if x < 0 or x >= self.width or y < 0 or y >= self.height:
-            return
+    def create_plotter(self, set=True):
         if set:
             if self.rot == 0:
-                self.fbuff[y][x // 8] |= 1 << (7 - (x % 8))
+                def plot(x, y):
+                    self.fbuff[y][x // 8] |= 1 << (7 - (x % 8))
             elif self.rot == 1:
-                self.fbuff[x][15 - (y // 8)] |= 1 << (y % 8)
+                def plot(x, y):
+                    self.fbuff[x][15 - (y // 8)] |= 1 << (y % 8)
             elif self.rot == 2:
-                self.fbuff[63 - y][15 - (x // 8)] |= 1 << (x % 8)
+                def plot(x, y):
+                    self.fbuff[63 - y][15 - (x // 8)] |= 1 << (x % 8)
             elif self.rot == 3:
-                self.fbuff[63 - x][y // 8] |= 1 << (7 - (y % 8))
+                def plot(x, y):
+                    self.fbuff[63 - x][y // 8] |= 1 << (7 - (y % 8))
         else:
             if self.rot == 0:
-                self.fbuff[y][x // 8] &= ~(1 << (7 - (x % 8)))
+                def plot(x, y):
+                    self.fbuff[y][x // 8] &= ~(1 << (7 - (x % 8)))
             elif self.rot == 1:
-                self.fbuff[x][15 - (y // 8)] &= ~(1 << (y % 8))
+                def plot(x, y):
+                    self.fbuff[x][15 - (y // 8)] &= ~(1 << (y % 8))
             elif self.rot == 2:
-                self.fbuff[63 - y][15 - (x // 8)] &= ~(1 << (x % 8))
+                def plot(x, y):
+                    self.fbuff[63 - y][15 - (x // 8)] &= ~(1 << (x % 8))
             elif self.rot == 3:
-                self.fbuff[63 - x][y // 8] &= ~(1 << (7 - (y % 8)))
+                def plot(x, y):
+                    self.fbuff[63 - x][y // 8] &= ~(1 << (7 - (y % 8)))
+        return plot
 
     def redraw(self, dx1=None, dy1=None, dx2=None, dy2=None):
         """
