@@ -84,11 +84,20 @@ class PillowScreen(canvas.Canvas):
         )
         self.pygletSprite = pyglet.sprite.Sprite(self.pygletImage, 0, 0)
 
-    def plot(self, x, y, set=True):
-        if x >=0 and x < canvas.Canvas.width and y >= 0 and y < canvas.Canvas.height:
-            self.pixelMap[x,y] = pilBlack if set else pilWhite
+    def create_plotter(self, set=True):
+        check = False
+        if set:
+            def plot(x, y):
+                if check and (x < 0 or x >= canvas.Canvas.width or y < 0 or y >= canvas.Canvas.height):
+                    return
+                self.pixelMap[x, y] = pilBlack
         else:
-            pass
+            def plot(x, y):
+                if check and (x < 0 or x >= canvas.Canvas.width or y < 0 or y >= canvas.Canvas.height):
+                    return
+                self.pixelMap[x, y] = pilWhite
+        return plot
+
 
     def clear(self):
         self.pilBufferDraw.rectangle((0, 0, self.pilBufferImage.width, self.pilBufferImage.height), fill=pilWhite)
@@ -140,7 +149,7 @@ if __name__ == "__main__":
     screen = PillowScreen()
     window = createPygletWindow([screen])
 
-    blackPlotter = screen.create_plotter(False)
+    blackPlotter = screen.create_plotter(True)
 
     def draw_once(*a):
         print("Once")
