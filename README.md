@@ -1,6 +1,8 @@
-# Micropython ST7920
+# WORK IN PROGRESS. NOT FUNCTIONAL!
 
-Micropython library for simple graphic primitives on ST7920 128x64 monochrome LCD panel using ESP8266 and SPI
+# Circuitpython ST7920
+
+Circuitpython library for simple graphic primitives on ST7920 128x64 monochrome LCD panel using SPI
 
 # Features
 
@@ -41,52 +43,9 @@ screen.clear()
 screen.redraw()
 ```
 
-# Included Example
-
-Install ampy by running...
-
-```bash
-pip install adafruit-ampy
-```
-
-Then change to this directory and upload files...
-
-```bash
-ampy --port /dev/ttyUSB0 put st7920.py
-ampy --port /dev/ttyUSB0 put example.py
-```
-
-You should then be able to interactively run the following from the REPL...
-
-```python
-import example
-example.run
-```
-
-Alternatively upload the main.py file as well as follows...
-
-```bash
-ampy --port /dev/ttyUSB0 put main.py
-```
-
-...and the example will automatically run on boot
-
-
-# Typography
-
-See also @ShrimpingIt's [bitfont project](https://github.com/ShrimpingIt/bitfont) 
-for pixel typography logic which can be used with micropython-st7920 and 
-other bit-rendering environments.
-
 # Credits
 
 Developed by @cefn of @ShrimpingIt based on @JMW95's incredibly useful reference Raspberry Pi python SPI port at https://github.com/JMW95/pyST7920, funded by the Milecastles project
-
-# Todo
-
-Consider use of Micropython's [framebuf](https://docs.micropython.org/en/latest/esp8266/library/framebuf.html) Framebuffer library to see if it offers any acceleration, or just for conformance with other libraries - draw primitives look like they are the same.
-
-
 
 # See also
 
